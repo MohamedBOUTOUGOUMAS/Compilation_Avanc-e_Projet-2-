@@ -504,14 +504,45 @@ Un appel de fonction (call) �crit aussi l'adresse de retour dans $31 donc d�
 ******************/
 
 void Basic_block::compute_use_def(void){
-  if (use_def_done) return;
- 
-  /* A REMPLIR */
- 
+	if (use_def_done)
+		return;
 
+	/* A REMPLIR */
 
-  /* FIN A REMPLIR */
-    return;
+	for (int i = 0; i < get_nb_inst(); i++) {
+		Instruction * inst = get_instruction_at_index(i);
+		if (inst->is_mem_store()) {
+			if(inst->get_reg_dst() != nullptr){
+				Use[inst->get_reg_dst()->get_reg_num()] = true;
+			}
+			if(inst->get_reg_src1() != nullptr){
+				Use[inst->get_reg_src1()->get_reg_num()] = true;
+			}
+			if(inst->get_reg_src2() != nullptr){
+				Use[inst->get_reg_src2()->get_reg_num()] = true;
+			}
+		}else if(inst->is_call()){
+			Def[31] = true;
+			Def[2] = true;
+			Def[4] = true;
+			Def[5] = true;
+			Def[6] = true;
+			Def[7] = true;
+		}else{
+			if(inst->get_reg_dst() != nullptr){
+				Def[inst->get_reg_dst()->get_reg_num()] = true;
+			}
+			if(inst->get_reg_src1() != nullptr){
+				Use[inst->get_reg_src1()->get_reg_num()] = true;
+			}
+			if(inst->get_reg_src2() != nullptr){
+				Use[inst->get_reg_src2()->get_reg_num()] = true;
+			}
+		}
+	}
+
+	/* FIN A REMPLIR */
+	return;
 }
 
 
