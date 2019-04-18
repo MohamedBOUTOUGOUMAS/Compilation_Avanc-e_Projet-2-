@@ -361,28 +361,50 @@ void Basic_block::comput_pred_succ_dep(){
 
 		/* A REMPLIR */
 
-		for (int i = 0; i < get_nb_inst(); i++) {
+
+
+		for (int i = get_nb_inst() - 1; i >= 0; i--) {
+
+			bool raw1 = true;
+			bool raw2 = true;
+			bool waw = true;
+
 			Instruction * inst1 = get_instruction_at_index(i);
-			for (int j = i; j < get_nb_inst(); j++) {
+			for (int j = inst1->get_index() - 1; j >= 0; j--) {
 				Instruction * inst2 = get_instruction_at_index(j);
-				if (i == j) {
-					continue;
-				}
-				if (inst1->is_dep_RAW(inst2)) {
-					add_dep_link(inst1, inst2, t_Dep::RAW);
-				} else if (inst1->is_dep_MEM(inst2)) {
-					add_dep_link(inst1, inst2, t_Dep::MEMDEP);
-				} else if (inst1->is_dep_WAR(inst2)) {
-					add_dep_link(inst1, inst2, t_Dep::WAR);
-				} else if (inst1->is_dep_WAW(inst2)) {
-					add_dep_link(inst1, inst2, t_Dep::WAW);
+				if (inst2->is_dep_RAW1(inst1) && raw1) {
+
+					add_dep_link(inst2, inst1, t_Dep::RAW);
+					raw1 = false;
+
+				}else if(inst2->is_dep_RAW2(inst1) && raw2){
+
+					add_dep_link(inst2, inst1, t_Dep::RAW);
+					raw2 = false;
+
+				}else if (inst2->is_dep_MEM(inst1)) {
+
+					add_dep_link(inst2, inst1, t_Dep::MEMDEP);
+
+				} else if (inst2->is_dep_WAR(inst1) && waw) {
+
+					add_dep_link(inst2, inst1, t_Dep::WAR);
+					waw = false;
+
+				}else if (inst2->is_dep_WAW(inst1) && waw) {
+
+					add_dep_link(inst2, inst1, t_Dep::WAW);
+					waw = false;
+
 				}
 			}
+
 		}
+
 
 		for (int i = 0; i < get_nb_inst(); i++) {
 			Instruction * inst = get_instruction_at_index(i);
-			if (is_delayed_slot(inst)) {
+			if (is_delayed_slot(inst) || inst->is_branch()) {
 				continue;
 			}
 			if (inst->get_nb_succ() == 0) {
@@ -393,6 +415,7 @@ void Basic_block::comput_pred_succ_dep(){
 				add_dep_link(inst, getInst(br), t_Dep::CONTROL);
 			}
 		}
+
 		// FIN A REMPLIR
 
 		// NE PAS ENLEVER : cette fonction ne doit �tre appel�e qu'une seule fois
@@ -441,7 +464,7 @@ int Basic_block::nb_cycles(){
 			inst_cycle[i] = -1;
 		}
 
-		Instruction *ic = get_first_instruction();
+		Instruction * ic = get_first_instruction();
 		int exect = 0;
 		while (ic) {
 			if (ic->get_index() == 0) {
@@ -453,13 +476,13 @@ int Basic_block::nb_cycles(){
 				} else {
 					int cycle_inst_pred = inst_cycle[ic->get_prev()->get_index()];
 					Instruction * firstPred = ic->get_pred_dep(0)->inst;
+
 					int max = inst_cycle[firstPred->get_index()]
 							+ delai(ic->get_type(), firstPred->get_type());
 					for (int i = 0; i < ic->get_nb_pred(); i++) {
 						int nb_cy_i =
 								inst_cycle[ic->get_pred_dep(i)->inst->get_index()]
-										+ delai(ic->get_type(),
-												ic->get_pred_dep(i)->inst->get_type());
+										+ delai(ic->get_pred_dep(i)->inst->get_type(),ic->get_type());
 						if (max < nb_cy_i) {
 							max = nb_cy_i;
 						}
@@ -477,7 +500,8 @@ int Basic_block::nb_cycles(){
 
 			//FIN A REMPLIR
 	#ifdef DEBUG
-			cout << endl << "inst " << ic->get_index() << " " << ic->get_content()
+			cout << endl << "inst " << ic->get_index() << " "
+					<<ic->get_content()
 					<< " cycle " << inst_cycle[ic->get_index()];
 	#endif
 			ic = ic->get_next();
@@ -512,31 +536,41 @@ void Basic_block::compute_use_def(void){
 	for (int i = 0; i < get_nb_inst(); i++) {
 		Instruction * inst = get_instruction_at_index(i);
 		if (inst->is_mem_store()) {
-			if(inst->get_reg_dst() != nullptr){
-				Use[inst->get_reg_dst()->get_reg_num()] = true;
+			if (inst->get_reg_dst() != nullptr) {
+				if (!Def[inst->get_reg_dst()->get_reg_num()]) {
+					Use[inst->get_reg_dst()->get_reg_num()] = true;
+				}
 			}
-			if(inst->get_reg_src1() != nullptr){
-				Use[inst->get_reg_src1()->get_reg_num()] = true;
+			if (inst->get_reg_src1() != nullptr) {
+				if (!Def[inst->get_reg_src1()->get_reg_num()]) {
+					Use[inst->get_reg_src1()->get_reg_num()] = true;
+				}
 			}
-			if(inst->get_reg_src2() != nullptr){
-				Use[inst->get_reg_src2()->get_reg_num()] = true;
+			if (inst->get_reg_src2() != nullptr) {
+				if (!Def[inst->get_reg_src2()->get_reg_num()]) {
+					Use[inst->get_reg_src2()->get_reg_num()] = true;
+				}
 			}
-		}else if(inst->is_call()){
+		} else if (inst->is_call()) {
 			Def[31] = true;
 			Def[2] = true;
 			Def[4] = true;
 			Def[5] = true;
 			Def[6] = true;
 			Def[7] = true;
-		}else{
-			if(inst->get_reg_dst() != nullptr){
+		} else {
+			if (inst->get_reg_dst() != nullptr) {
 				Def[inst->get_reg_dst()->get_reg_num()] = true;
 			}
-			if(inst->get_reg_src1() != nullptr){
-				Use[inst->get_reg_src1()->get_reg_num()] = true;
+			if (inst->get_reg_src1() != nullptr) {
+				if (!Def[inst->get_reg_src1()->get_reg_num()]) {
+					Use[inst->get_reg_src1()->get_reg_num()] = true;
+				}
 			}
-			if(inst->get_reg_src2() != nullptr){
-				Use[inst->get_reg_src2()->get_reg_num()] = true;
+			if (inst->get_reg_src2() != nullptr) {
+				if (!Def[inst->get_reg_src2()->get_reg_num()]) {
+					Use[inst->get_reg_src2()->get_reg_num()] = true;
+				}
 			}
 		}
 	}

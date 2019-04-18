@@ -441,8 +441,32 @@ void Function::compute_live_var(){
  
   list<Basic_block*> workinglist;
   bool change = true;
- 
-   
+
+  Basic_block * lastBB = get_BB(_myBB.size() - 1);
+  vector<bool> tmp(lastBB->Use.size(), false);
+
+  for(int i=0; i<lastBB->Use.size(); i++){
+	  lastBB->LiveIn[i] = lastBB->Use[i];
+//	  lastBB->LiveOut[i] = false;
+  }
+  for(auto bb : _myBB){
+	  if(bb->get_index() == _myBB.size()){
+		  continue;
+	  }
+	  // calcul de LiveOut
+	  for(int j = 0; j< bb->get_nb_succ(); j++){
+		  for(int k = 0; k<bb->get_successor(j)->LiveIn.size(); k++){
+			  bb->LiveOut[k] = bb->LiveOut[k] || bb->get_successor(j)->LiveIn[k];
+		  }
+	  }
+
+	  // calcul de LiveIn
+	  for(int i=0; i<bb->Use.size(); i++){
+		  bb->LiveIn[i] = bb->Use[i] || (bb->LiveOut[i] && bb->Def[i]);
+	  }
+
+  }
+
 
   /* A REMPLIR avec algo vu en cours et en TD*/
  /* algorithme it�ratif qui part des blocs sans successeur, ne pas oublier que lorsque l'on sort d'une fonction le registre $2 contient le r�sultat (il est donc vivant), le registre pointeur de pile ($29) est aussi vivant ! */
