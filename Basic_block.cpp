@@ -593,7 +593,28 @@ void Basic_block::show_use_def(void) {
  *****/
 void Basic_block::compute_def_liveout() {
 
+
 	/* A REMPLIR */
+	for (int i = 0; i < NB_REG; i++) {
+
+		if (LiveOut[i]) {
+
+			for (int j = 0; j < get_nb_inst(); j++) {
+
+				Instruction * inst = get_instruction_at_index(j);
+
+				if (inst->is_mem_store()) {
+					continue;
+				}
+
+				if (inst->get_reg_dst() != nullptr) {
+					if (inst->get_reg_dst()->get_reg_num() == i) {
+						DefLiveOut[i] = j;
+					}
+				}
+			}
+		}
+	}
 
 	/* FIN A REMPLIR */
 
@@ -618,8 +639,52 @@ void Basic_block::show_def_liveout() {
 void Basic_block::reg_rename(list<int> *frees) {
 	compute_def_liveout(); // definition vivantes en sortie necessaires � connaitre
 
-	/* A REMPLIR */
 
+
+	/* A REMPLIR */
+	compute_use_def(); // USE et DEF
+
+	vector<int> defInst(NB_REG, -1); // defInst\defLive
+
+	for (int i = 0; i < NB_REG; i++) {
+		if (!LiveOut[i]) {
+			for (int j = 0; j < get_nb_inst(); j++) {
+				Instruction * inst = get_instruction_at_index(j);
+
+				if (inst->is_mem_store()) {
+					continue;
+				}
+
+				if (inst->get_reg_dst() != nullptr) {
+					if (inst->get_reg_dst()->get_reg_num() == i) {
+						defInst[i] = j;
+					}
+				}
+			}
+		}
+	}
+
+	for (int i = 0; i < NB_REG; i++) {
+		Instruction * inst = get_instruction_at_index(defInst[i]);
+		for (int j = 0; j < inst->get_nb_succ(); j++) {
+			Instruction * inst2 = inst->get_succ_dep(j)->inst;
+			if (inst->is_dep_RAW1(inst2)) {
+
+				int newR = frees->front();
+				inst->get_reg_dst()->set_reg_num(newR);
+				inst2->get_reg_src1()->set_reg_num(newR);
+				frees->pop_front();
+
+			} else if (inst->is_dep_RAW2(inst2)) {
+
+				int newR = frees->front();
+				inst->get_reg_dst()->set_reg_num(newR);
+				inst2->get_reg_src2()->set_reg_num(newR);
+				frees->pop_front();
+
+			}
+		}
+	}
 	/* FIN A REMPLIR */
 
 }
@@ -629,11 +694,22 @@ void Basic_block::reg_rename(list<int> *frees) {
  *****/
 void Basic_block::reg_rename() {
 
+
 	compute_def_liveout();
 
-	list<int> free_regs;
+
+	list<int> * free_regs;
 
 	/* A REMPLIR */
+	compute_use_def(); // USE et DEF
+
+	for (int i = 0; i < NB_REG; i++) {
+		if (!LiveIn[i] && !Def[i]) {
+			free_regs->push_back(i);
+		}
+	}
+
+	reg_rename(free_regs);
 
 	/* FIN A REMPLIR */
 
