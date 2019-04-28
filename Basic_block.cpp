@@ -514,7 +514,6 @@ int Basic_block::nb_cycles() {
  DEF[i] vaut 1 si $i est d�fini (�crit) dans le bloc 
  ne pas oublier les conventions d'appel : les registres $4, $5, $6, $7 peuvent contenir des param�tres (du 1er au 4eme les autres sont sur la pile) avant un appel de fonctions, au retour d'une fonction $2 a �t� �crit car il contient la valeur de retour (sauf si on rend void).
  Un appel de fonction (call) �crit aussi l'adresse de retour dans $31 donc d�finit implicitement $31.
-
  ******************/
 
 void Basic_block::compute_use_def(void) {
@@ -593,7 +592,6 @@ void Basic_block::show_use_def(void) {
  *****/
 void Basic_block::compute_def_liveout() {
 
-
 	/* A REMPLIR */
 	for (int i = 0; i < NB_REG; i++) {
 
@@ -637,12 +635,9 @@ void Basic_block::show_def_liveout() {
  *****/
 
 void Basic_block::reg_rename(list<int> *frees) {
-	compute_def_liveout(); // definition vivantes en sortie necessaires � connaitre
-
-
+	//compute_def_liveout(); // definition vivantes en sortie necessaires � connaitre
 
 	/* A REMPLIR */
-	compute_use_def(); // USE et DEF
 
 	vector<int> defInst(NB_REG, -1); // defInst\defLive
 
@@ -656,7 +651,8 @@ void Basic_block::reg_rename(list<int> *frees) {
 				}
 
 				if (inst->get_reg_dst() != nullptr) {
-					if (inst->get_reg_dst()->get_reg_num() == i) {
+					int num = inst->get_reg_dst()->get_reg_num();
+					if (num == i) {
 						defInst[i] = j;
 					}
 				}
@@ -664,23 +660,39 @@ void Basic_block::reg_rename(list<int> *frees) {
 		}
 	}
 
+	int k=0;
+	auto it = frees->begin();
+
 	for (int i = 0; i < NB_REG; i++) {
 		Instruction * inst = get_instruction_at_index(defInst[i]);
 		for (int j = 0; j < inst->get_nb_succ(); j++) {
 			Instruction * inst2 = inst->get_succ_dep(j)->inst;
-			if (inst->is_dep_RAW1(inst2)) {
 
-				int newR = frees->front();
+			if (inst->is_dep_RAW1(inst2)) {
+				auto it = frees->begin();
+				for(int l=0; l<k; l++){
+					it++;
+				}
+				int newR = *it;
+				cout<<"k "<<k<<endl;
+				cout<<"newR "<<newR<<endl;
+				k++;
 				inst->get_reg_dst()->set_reg_num(newR);
 				inst2->get_reg_src1()->set_reg_num(newR);
-				frees->pop_front();
+
 
 			} else if (inst->is_dep_RAW2(inst2)) {
-
-				int newR = frees->front();
+				auto it = frees->begin();
+				for (int l = 0; l < k; l++) {
+					it++;
+				}
+				int newR = *it;
+				cout<<"k "<<k<<endl;
+				cout<<"newR "<<newR<<endl;
+				k++;
 				inst->get_reg_dst()->set_reg_num(newR);
 				inst2->get_reg_src2()->set_reg_num(newR);
-				frees->pop_front();
+
 
 			}
 		}
@@ -694,22 +706,19 @@ void Basic_block::reg_rename(list<int> *frees) {
  *****/
 void Basic_block::reg_rename() {
 
-
 	compute_def_liveout();
 
-
-	list<int> * free_regs;
+	list<int> free_regs;
 
 	/* A REMPLIR */
-	compute_use_def(); // USE et DEF
 
 	for (int i = 0; i < NB_REG; i++) {
 		if (!LiveIn[i] && !Def[i]) {
-			free_regs->push_back(i);
+			free_regs.push_back(i);
 		}
 	}
 
-	reg_rename(free_regs);
+	reg_rename(&free_regs);
 
 	/* FIN A REMPLIR */
 
