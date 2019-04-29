@@ -444,14 +444,14 @@ void Function::compute_live_var() {
 
 		if (bb->get_nb_succ() == 0) {
 
-//			if (bb->get_branch() != nullptr) {
-//				Line * l = bb->get_branch();
-//				Instruction * in = getInst(l);
-//				if (in->is_branch()) {
-//					bb->LiveOut[2] = true;
-//					bb->LiveOut[29] = true;
-//				}
-//			}
+			if (bb->get_branch() != nullptr) {
+				Line * l = bb->get_branch();
+				Instruction * in = getInst(l);
+				//if (!in->is_cond_branch()) {
+					bb->LiveOut[2] = true;
+					bb->LiveOut[29] = true;
+				//}
+			}
 
 		} else {
 

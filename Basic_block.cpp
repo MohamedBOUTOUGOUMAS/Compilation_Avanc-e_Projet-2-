@@ -380,10 +380,10 @@ void Basic_block::comput_pred_succ_dep() {
 
 				add_dep_link(inst2, inst1, t_Dep::MEMDEP);
 
-			} else if (inst2->is_dep_WAR(inst1) && waw) {
+			} else if (inst2->is_dep_WAR(inst1)) {
 
 				add_dep_link(inst2, inst1, t_Dep::WAR);
-				waw = false;
+
 
 			} else if (inst2->is_dep_WAW(inst1) && waw) {
 
@@ -467,10 +467,7 @@ int Basic_block::nb_cycles() {
 						inst_cycle[ic->get_prev()->get_index()] + 1;
 			} else {
 				int cycle_inst_pred = inst_cycle[ic->get_prev()->get_index()];
-				Instruction * firstPred = ic->get_pred_dep(0)->inst;
-
-				int max = inst_cycle[firstPred->get_index()]
-						+ delai(ic->get_type(), firstPred->get_type());
+				int max = 0;
 				for (int i = 0; i < ic->get_nb_pred(); i++) {
 					int nb_cy_i =
 							inst_cycle[ic->get_pred_dep(i)->inst->get_index()]
@@ -480,10 +477,11 @@ int Basic_block::nb_cycles() {
 					if (max < nb_cy_i) {
 						max = nb_cy_i;
 					}
+
 				}
 
-				if (max < cycle_inst_pred) {
-					inst_cycle[ic->get_index()] = cycle_inst_pred;
+				if (max < cycle_inst_pred +1) {
+					inst_cycle[ic->get_index()] = cycle_inst_pred +1;
 				} else {
 					inst_cycle[ic->get_index()] = max;
 				}
@@ -635,7 +633,7 @@ void Basic_block::show_def_liveout() {
  *****/
 
 void Basic_block::reg_rename(list<int> *frees) {
-	//compute_def_liveout(); // definition vivantes en sortie necessaires � connaitre
+	compute_def_liveout(); // definition vivantes en sortie necessaires � connaitre
 
 	/* A REMPLIR */
 
@@ -660,42 +658,78 @@ void Basic_block::reg_rename(list<int> *frees) {
 		}
 	}
 
-	int k=0;
-	auto it = frees->begin();
+	int k = 0;
 
 	for (int i = 0; i < NB_REG; i++) {
-		Instruction * inst = get_instruction_at_index(defInst[i]);
-		for (int j = 0; j < inst->get_nb_succ(); j++) {
-			Instruction * inst2 = inst->get_succ_dep(j)->inst;
+		if (defInst[i] != -1) {
+			Instruction * inst = get_instruction_at_index(defInst[i]);
+//			cout<<"inst->get_nb_succ() "<<inst->get_nb_succ()<<endl;
+			for (int j = 0; j < inst->get_nb_succ(); j++) {
 
-			if (inst->is_dep_RAW1(inst2)) {
-				auto it = frees->begin();
-				for(int l=0; l<k; l++){
-					it++;
+
+				Instruction * inst2 = inst->get_succ_dep(j)->inst;
+
+				if (inst->is_dep_RAW1(inst2)) {
+					auto it = frees->begin();
+					for (int l = 0; l < k; l++) {
+						it++;
+					}
+					int newR = *it;
+//					cout << "RAW1 k " << k << " j " << j << " i " << i << endl;
+//					cout << "RAW1 newR " << newR << endl;
+					k++;
+					inst->get_reg_dst()->set_reg_num(newR);
+					inst2->get_reg_src1()->set_reg_num(newR);
+
+				} else if (inst->is_dep_RAW2(inst2)) {
+					auto it = frees->begin();
+					for (int l = 0; l < k; l++) {
+						it++;
+					}
+					int newR = *it;
+//					cout << "RAW2 k " << k << " j " << j << " i " << i << endl;
+//					cout << "RAW2 newR " << newR << endl;
+					k++;
+					inst->get_reg_dst()->set_reg_num(newR);
+					inst2->get_reg_src2()->set_reg_num(newR);
+
 				}
-				int newR = *it;
-				cout<<"k "<<k<<endl;
-				cout<<"newR "<<newR<<endl;
-				k++;
-				inst->get_reg_dst()->set_reg_num(newR);
-				inst2->get_reg_src1()->set_reg_num(newR);
-
-
-			} else if (inst->is_dep_RAW2(inst2)) {
-				auto it = frees->begin();
-				for (int l = 0; l < k; l++) {
-					it++;
-				}
-				int newR = *it;
-				cout<<"k "<<k<<endl;
-				cout<<"newR "<<newR<<endl;
-				k++;
-				inst->get_reg_dst()->set_reg_num(newR);
-				inst2->get_reg_src2()->set_reg_num(newR);
-
-
 			}
+
+//			cout<<"inst->get_nb_pred() "<<inst->get_nb_pred()<<endl;
+			for (int j = 0; j < inst->get_nb_pred(); j++) {
+
+				Instruction * inst2 = inst->get_pred_dep(j)->inst;
+
+				if (inst2->is_dep_RAW1(inst)) {
+					auto it = frees->begin();
+					for (int l = 0; l < k; l++) {
+						it++;
+					}
+					int newR = *it;
+					//					cout << "RAW1 k " << k << " j " << j << " i " << i << endl;
+					//					cout << "RAW1 newR " << newR << endl;
+					k++;
+					inst2->get_reg_dst()->set_reg_num(newR);
+					inst->get_reg_src1()->set_reg_num(newR);
+
+				} else if (inst2->is_dep_RAW2(inst)) {
+					auto it = frees->begin();
+					for (int l = 0; l < k; l++) {
+						it++;
+					}
+					int newR = *it;
+					//					cout << "RAW2 k " << k << " j " << j << " i " << i << endl;
+					//					cout << "RAW2 newR " << newR << endl;
+					k++;
+					inst2->get_reg_dst()->set_reg_num(newR);
+					inst->get_reg_src2()->set_reg_num(newR);
+
+				}
+			}
+
 		}
+
 	}
 	/* FIN A REMPLIR */
 
@@ -706,8 +740,6 @@ void Basic_block::reg_rename(list<int> *frees) {
  *****/
 void Basic_block::reg_rename() {
 
-	compute_def_liveout();
-
 	list<int> free_regs;
 
 	/* A REMPLIR */
@@ -717,7 +749,7 @@ void Basic_block::reg_rename() {
 			free_regs.push_back(i);
 		}
 	}
-
+//	cout<<"Size of free_regs : "<<free_regs.size()<<endl;
 	reg_rename(&free_regs);
 
 	/* FIN A REMPLIR */
