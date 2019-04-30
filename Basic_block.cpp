@@ -468,14 +468,30 @@ int Basic_block::nb_cycles() {
 			} else {
 				int cycle_inst_pred = inst_cycle[ic->get_prev()->get_index()];
 				int max = 0;
+
 				for (int i = 0; i < ic->get_nb_pred(); i++) {
-					int nb_cy_i =
-							inst_cycle[ic->get_pred_dep(i)->inst->get_index()]
-									+ delai(
-											ic->get_pred_dep(i)->inst->get_type(),
-											ic->get_type());
-					if (max < nb_cy_i) {
-						max = nb_cy_i;
+					if (ic->get_pred_dep(i)->inst->is_dep_RAW(ic)) {
+						int nb_cy_i =
+								inst_cycle[ic->get_pred_dep(i)->inst->get_index()]
+										+ delai(
+												ic->get_pred_dep(i)->inst->get_type(),
+												ic->get_type());
+						if (max < nb_cy_i) {
+							max = nb_cy_i;
+						}
+					} else if (ic->get_pred_dep(i)->inst->is_dep_MEM(ic)) {
+						int nb_cy_i =
+								inst_cycle[ic->get_pred_dep(i)->inst->get_index()]
+										+ 1;
+						if (max < nb_cy_i) {
+							max = nb_cy_i;
+						}
+					} else if (ic->get_pred_dep(i)->inst->is_dep_WAR(ic)) {
+						int nb_cy_i =
+								inst_cycle[ic->get_pred_dep(i)->inst->get_index()];
+						if (max < nb_cy_i) {
+							max = nb_cy_i;
+						}
 					}
 
 				}
